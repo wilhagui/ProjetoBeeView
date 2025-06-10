@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Por que filmes brasileiros não ganham o Oscar?</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        :root {
+            --bg-color: #040500;
+            --primary-text-color: #f0f0f0;
+            --primary-text-color-rgb: 240, 240, 240; /* Added for rgba calculations */
+            --accent-color: #ffcf00;
+            --accent-color-rgb: 255, 207, 0;
+            --accent-color-darker: #e6b800;
+            --accent-color-darker-rgb: 230, 184, 0;
+            --winner-accent-color: #FFD700; /* Amarelo/Dourado para Vencedor */
+            --winner-accent-rgb: 255, 215, 0;
+            --brazil-accent-color: #009c3b; /* Verde para Brasil */
+            --brazil-accent-rgb: 0, 156, 59;
+            --card-bg-color: #181818;
+            --card-highlight-bg: #242424;
+            --border-color: rgba(var(--accent-color-rgb), 0.2);
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--primary-text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background-color: var(--card-bg-color);
+            padding: 10px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(var(--accent-color-rgb), 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar h1 {
+            color: var(--accent-color);
+            margin: 0 0 8px 0;
+            font-size: 1.5em;
+            width: 100%;
+            text-align: center;
+        }
+
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .nav-item {
+            color: var(--primary-text-color);
+            background-color: #333;
+            text-decoration: none;
+            padding: 6px 10px;
+            margin: 4px;
+            border-radius: 4px;
+            transition: background-color 0.3s, color 0.3s, transform 0.2s;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.75em;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover {
+            background-color: var(--card-highlight-bg);
+            transform: translateY(-1px);
+        }
+        .nav-item.active {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            font-weight: bold;
+            border-color: var(--accent-color);
+        }
+
+        .main-content {
+            padding: 15px;
+            flex-grow: 1;
+        }
+
+        .year-section { display: none; animation: fadeIn 0.5s ease-in-out; }
+        .year-section.active { display: block; }
+
+        .year-header { text-align: center; margin-bottom: 20px; }
+        .year-title { color: var(--accent-color); font-size: 1.7em; margin-bottom: 0px; }
+        .year-category { font-size: 1em; color: #ccc; margin-top: 0px; }
+
+        .focus-highlight-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+         .focus-highlight-grid.single-focus {
+            grid-template-columns: minmax(280px, 0.6fr);
+            justify-content: center;
+        }
+
+
+        .film-spotlight-card {
+            background-color: var(--card-highlight-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            border-top: 4px solid var(--card-bg-color);
+            color: var(--primary-text-color);
+        }
+        .film-spotlight-card.brazilian { border-top-color: var(--brazil-accent-color); }
+        .film-spotlight-card.winner { border-top-color: var(--winner-accent-color); }
+        .film-spotlight-card.brazilian-winner {
+            border-top-color: var(--accent-color);
+        }
+
+
+        .film-spotlight-card .card-header { width: 100%; text-align: center; margin-bottom: 10px; }
+        .film-spotlight-card .card-header h3 {
+            margin: 0 0 5px 0; font-size: 1.2em; font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .film-spotlight-card .film-title { font-size: 1.1em; font-weight: bold; margin-bottom: 8px; color: var(--primary-text-color);}
+        .film-spotlight-card .film-country { font-size: 0.9em; color: #bbb; margin-bottom: 15px; }
+
+        .small-radar-container {
+            width: 100%;
+            max-width: 260px;
+            height: 220px;
+            margin: 10px auto 0 auto;
+        }
+
+        .comparison-section, .all-nominees-comparison-section { margin-bottom: 30px; }
+        .comparison-section > h3, .all-nominees-comparison-section > h3 {
+            color: var(--accent-color);
+            text-align: center;
+            font-size: 1.3em; margin-bottom: 15px;
+        }
+        .comparison-chart-container, .all-nominees-chart-container {
+            background-color: var(--card-bg-color); padding: 15px;
+            border-radius: 8px;
+        }
+        .comparison-chart-container { height: 300px; }
+        .all-nominees-chart-container { height: 400px; }
+
+        .comparison-note {
+            text-align: center; font-size: 0.9em; color: #aaa; margin-top: 10px;
+        }
+
+        .other-nominees-section > h3 {
+            color: var(--accent-color);
+            text-align: center;
+            font-size: 1.1em; margin-bottom: 12px;
+        }
+        .other-nominees-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+        .nominee-card {
+            background-color: var(--card-bg-color); padding: 15px;
+            border-radius: 6px; text-align: center; font-size: 0.85em;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border: 1px solid #2f2f2f;
+            min-height: 70px;
+            color: var(--primary-text-color);
+        }
+        .nominee-card .title { font-weight: bold; margin-bottom: 5px; line-height: 1.3; color: var(--primary-text-color);}
+        .nominee-card .country { font-size: 0.9em; color: #aaa; }
+
+        /* Aumentando o tamanho da fonte e números nos gráficos */
+        /* Geral para todos os gráficos (Chart.js defaults) */
+        canvas {
+            font-size: 12px !important; /* Aumenta a fonte geral do canvas */
+        }
+
+        /* Específico para o radar chart */
+        .small-radar-container canvas {
+            font-size: 10px !important; /* Ajuste se necessário para o radar */
+        }
+        .small-radar-container {
+            max-width: 300px; /* Aumenta um pouco o container para o radar */
+            height: 250px;
+        }
+
+        /* Específico para os bar charts */
+        .comparison-chart-container canvas,
+        .all-nominees-chart-container canvas {
+            font-size: 12px !important;
+        }
+
+
+        @media (min-width: 768px) {
+            .navbar h1 { width: auto; margin-bottom: 0; text-align: left; font-size: 1.5em; }
+            .nav-links { width: auto; }
+            .nav-item { font-size: 0.8em; padding: 7px 12px;}
+            .year-title { font-size: 2em; }
+            .year-category { font-size: 1.1em; }
+           .focus-highlight-grid:not(.single-focus) { grid-template-columns: 1fr 1fr; }
+        }
+        @media (min-width: 1024px) {
+            .other-nominees-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));}
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <h1>Por que filmes brasileiros não ganham o Oscar?</h1>
+        <div class="nav-links">
+        </div>
+    </nav>
+
+    <main class="main-content" id="mainContent">
+    </main>
+
+    <script>
+        Chart.register(ChartDataLabels);
+        Chart.defaults.color = 'var(--primary-text-color)';
+        Chart.defaults.borderColor = 'var(--border-color)';
+        Chart.defaults.font.family = "var(--font-family)";
+        Chart.defaults.plugins.datalabels.display = true; // Habilita datalabels por padrão
+
+        // --- DADOS DOS FILMES ---
+        const oscarData = {
+            "1963": {
+                pageTitleSuffix: "Filmes de 1962",
+                category: "Melhor Filme Estrangeiro",
+                films:
+                [
+                    { id: 59990, tituloOriginal: "O Pagador de Promessas", tituloCSV: "O Pagador de Promessas", paisTMDB: "Brasil", anoTMDB: 1962, cinematografia: 9.5, impactoNarrativo: 9.5, reconhecimento: 10.0, marketing: 8.5, elegibilidade: 9.0, atuacao: 9.5, genero: "Drama", isBrazilian: true, isWinner: false },
+                    { id: 43001, tituloOriginal: "Sundays and Cybele", tituloCSV: "Sinfonia de um Amor", paisTMDB: "França", anoTMDB: 1962, cinematografia: 8.5, impactoNarrativo: 8.8, reconhecimento: 9.0, marketing: 8.5, elegibilidade: 9.0, atuacao: 9.0, genero: "Drama", isBrazilian: false, isWinner: true },
+                    { id: 47447, tituloOriginal: "Elektra", tituloCSV: "Electra", paisTMDB: "Grécia", anoTMDB: 1962, cinematografia: 8.5, impactoNarrativo: 8.8, reconhecimento: 8.0, marketing: 7.5, elegibilidade: 8.5, atuacao: 9.0, genero: "Drama", isBrazilian: false, isWinner: false },
+                    { id: 194163, tituloOriginal: "Tlayucan", tituloCSV: "Tlayucan", paisTMDB: "México", anoTMDB: 1962, cinematografia: 8.0, impactoNarrativo: 8.5, reconhecimento: 7.0, marketing: 7.0, elegibilidade: 8.0, atuacao: 8.0, genero: "Drama", isBrazilian: false, isWinner: false },
+                    { id: 70957, tituloOriginal: "The Four Days of Naples", tituloCSV: "The Four Days of Naples", paisTMDB: "Itália", anoTMDB: 1962, cinematografia: null, impactoNarrativo: null, reconhecimento: null, marketing: null, elegibilidade: null, atuacao: null, genero: "Não informado", isBrazilian: false, isWinner: false }
+                ]
+            },
+            "1996": {
+                pageTitleSuffix: "Filmes de 1995",
+                category: "Melhor Filme Estrangeiro",
+                films:
+                [
+                    { id: 67617, tituloOriginal: "O Quatrilho", tituloCSV: "O Quatrilho", paisTMDB: "Brasil", anoTMDB: 1995, cinematografia: 9.0, impactoNarrativo: 8.5, reconhecimento: 8.5, marketing: 7.5, elegibilidade: 9.0, atuacao: 9.0, genero: "Drama e Romance", isBrazilian: true, isWinner: false },
+                    { id: 880, tituloOriginal: "Antonia's Line", tituloCSV: "A Excêntrica Família de Antônia", paisTMDB: "Países Baixos", anoTMDB: 1995, cinematografia: 9.0, impactoNarrativo: 9.5, reconhecimento: 9.0, marketing: 7.5, elegibilidade: 9.5, atuacao: 9.0, genero: "Comédia Dramática", isBrazilian: false, isWinner: true },
+                    { id: 27098, tituloOriginal: "All Things Fair", tituloCSV: "All Things Fair", paisTMDB: "Suécia", anoTMDB: 1995, cinematografia: 8.5, impactoNarrativo: 9.0, reconhecimento: 9.0, marketing: 7.5, elegibilidade: 9.0, atuacao: 9.0, genero: "Drama", isBrazilian: false, isWinner: false },
+                    { id: 124617, tituloOriginal: "Dust of Life", tituloCSV: "Dust of Life", paisTMDB: "Argélia", anoTMDB: 1995, cinematografia: 7.5, impactoNarrativo: 9.0, reconhecimento: 8.0, marketing: 7.0, elegibilidade: 9.0, atuacao: 8.5, genero: "Drama", isBrazilian: false, isWinner: false },
+                    { id: 37975, tituloOriginal: "The Star Maker", tituloCSV: "O Homem das Estrelas", paisTMDB: "Itália", anoTMDB: 1995, cinematografia: 8.5, impactoNarrativo: 9.0, reconhecimento: 8.0, marketing: 8.0, elegibilidade: 9.0, atuacao: 9.0, genero: "Drama", isBrazilian: false, isWinner: false }
+                ]
+            },
+            "1998": {
+                pageTitleSuffix: "Filmes de 1997",
+                category: "Melhor Filme Estrangeiro",
+                films:
+                [
+                    { id: 21253, tituloOriginal: "O Que é Isso, Companheiro?", tituloCSV: "O Que É Isso, Companheiro?", paisTMDB: "Brasil", anoTMDB: 1997, cinematografia: 8.0, impactoNarrativo: 8.5, reconhecimento: 8.0, marketing: 8.5, elegibilidade: 8.5, atuacao: 8.5, genero: "Drama", isBrazilian: true, isWinner: false },
+                    { id: 17139, tituloOriginal: "Karakter", tituloCSV: "Karakter", paisTMDB: "Países Baixos", anoTMDB: 1997, cinematografia: 9.0, impactoNarrativo: 9.0, reconhecimento: 8.8, marketing: 8.8, elegibilidade: 9.0, atuacao: 9.5, genero: "Drama", isBrazilian: false, isWinner: true },
+                    { id: 312, tituloOriginal: "Jenseits der Stille", tituloCSV: "A Música e o Silêncio", paisTMDB: "Alemanha", anoTMDB: 1996, cinematografia: 8.5, impactoNarrativo: 9.0, reconhecimento: 8.0, marketing: 8.0, elegibilidade: 8.5, atuacao: 8.8, genero: "Drama", isBrazilian: false, isWinner: false },
+                    { id: 46187, tituloOriginal: "Vor", tituloCSV: "O Ladrão (Vor)", paisTMDB: "Rússia", anoTMDB: 1997, cinematografia: 8.5, impactoNarrativo: 9.0, reconhecimento: 8.0, marketing: 7.8, elegibilidade: 8.5, atuacao: 9.0, genero: "Drama", isBrazilian: false, isWinner: false },
+                    { id: 92603, tituloOriginal: "Secretos del corazón", tituloCSV: "Segredos do Coração", paisTMDB: "Espanha", anoTMDB: 1997, cinematografia: 8.5, impactoNarrativo: 8.8, reconhecimento: 8.0, marketing: 7.8, elegibilidade: 8.5, atuacao: 8.8, genero: "Drama", isBrazilian: false, isWinner: false }
+                ]
+            },
+            "1999": {
+                pageTitleSuffix: "Filmes de 1998",
+                category: "Melhor Filme Estrangeiro",
+                films:
+                [
+                    { id: 666, tituloOriginal: "Central do Brasil", tituloCSV: "Central do Brasil", paisTMDB: "Brasil", anoTMDB: 1998, cinematografia: 9.8, impactoNarrativo: 9.8, reconhecimento: 8.0, marketing: 9.5, elegibilidade: 9.5, atuacao: 10.0, genero: "Drama", isBrazilian: true, isWinner: false },
+                    { id: 637, tituloOriginal: "La vita è bella", tituloCSV: "A Vida é Bela", paisTMDB: "Itália", anoTMDB: 1997, cinematografia: 9.5, impactoNarrativo: 9.8, reconhecimento: 10.0, marketing: 9.5, elegibilidade: 10.0, atuacao: 10.0, genero: "Comédia Dramática", isBrazilian: false, isWinner: true },
+                    { id: 69851, tituloOriginal: "El abuelo", tituloCSV: "O Avô", paisTMDB: "Espanha", anoTMDB: 1998, cinematografia: 8.5, impactoNarrativo: 8.8, reconhecimento: 8.0, marketing: 7.8, elegibilidade: 8.5, atuacao: 9.5, genero: "Drama", isBrazilian: false, isWinner: false },
+                    { id: 21334, tituloOriginal: "Children of Heaven", tituloCSV: "Filhos do Céu", paisTMDB: "Irã", anoTMDB: 1997, cinematografia: 9.0, impactoNarrativo: 9.5, reconhecimento: 8.5, marketing: 8.0, elegibilidade: 9.0, atuacao: 9.5, genero: "Drama", isBrazilian: false, isWinner: false },
+                    { id: 24242, tituloOriginal: "Tango", tituloCSV: "Tango", paisTMDB: "Argentina", anoTMDB: 0, cinematografia: null, impactoNarrativo: null, reconhecimento: null, marketing: null, elegibilidade: null, atuacao: null, genero: "Musical", isBrazilian: false, isWinner: false }
+                ]
+            },
+            "2016": {
+                pageTitleSuffix: "Animações de 2015",
+                category: "Melhor Filme de Animação",
+                films:
+                [
+                    { id: 223706, tituloOriginal: "O Menino e o Mundo", tituloCSV: "O Menino e o Mundo", paisTMDB: "Brasil", anoTMDB: 2014, cinematografia: 9.8, impactoNarrativo: 9.5, reconhecimento: 8.7, marketing: 8.5, elegibilidade: 9.0, atuacao: 9.5, genero: "Animação", isBrazilian: true, isWinner: false },
+                    { id: 150540, tituloOriginal: "Inside Out", tituloCSV: "Divertida Mente", paisTMDB: "EUA", anoTMDB: 2015, cinematografia: 10.0, impactoNarrativo: 10.0, reconhecimento: 10.0, marketing: 9.8, elegibilidade: 9.8, atuacao: 9.8, genero: "Animação", isBrazilian: false, isWinner: true },
+                    { id: 291270, tituloOriginal: "Anomalisa", tituloCSV: "Anomalisa", paisTMDB: "EUA", anoTMDB: 2015, cinematografia: 9.0, impactoNarrativo: 9.0, reconhecimento: 8.8, marketing: 8.5, elegibilidade: 8.8, atuacao: 9.0, genero: "Animação", isBrazilian: false, isWinner: false },
+                    { id: 263109, tituloOriginal: "Shaun the Sheep Movie", tituloCSV: "Shaun, o Carneiro: O Filme", paisTMDB: "Reino Unido/França", anoTMDB: 2015, cinematografia: 8.8, impactoNarrativo: 8.5, reconhecimento: 8.0, marketing: 8.0, elegibilidade: 8.8, atuacao: 9.0, genero: "Animação", isBrazilian: false, isWinner: false },
+                    { id: 242828, tituloOriginal: "When Marnie Was There", tituloCSV: "As Memórias de Marnie", paisTMDB: "Japão", anoTMDB: 2014, cinematografia: 9.0, impactoNarrativo: 9.0, reconhecimento: 8.5, marketing: 8.2, elegibilidade: 8.8, atuacao: 9.0, genero: "Animação", isBrazilian: false, isWinner: false }
+                ]
+            },
+            "2024": {
+                pageTitleSuffix: "Filmes de Destaque de 2024",
+                category: "Filmes Internacionais (Destaque)",
+                films:
+                [
+                    { id: 1000837, tituloOriginal: "Ainda Estou Aqui", tituloCSV: "Ainda Estou Aqui", paisTMDB: "Brasil", anoTMDB: 2024, cinematografia: 9.0, impactoNarrativo: 9.5, reconhecimento: 9.0, marketing: 8.5, elegibilidade: 9.0, atuacao: 9.5, genero: "Drama", isBrazilian: true, isWinner: true },
+                    { id: 1232827, tituloOriginal: "The Girl With The Needle", tituloCSV: "The Girl With The Needle", paisTMDB: "Dinamarca", anoTMDB: 2024, cinematografia: 8.8, impactoNarrativo: 9.2, reconhecimento: 9.0, marketing: 8.5, elegibilidade: 9.0, atuacao: 9.0, genero: "Drama", isBrazilian: false, isWinner: false },
+                    { id: 974950, tituloOriginal: "Emilia Pérez", tituloCSV: "Emilia Pérez", paisTMDB: "França", anoTMDB: 2024, cinematografia: 9.5, impactoNarrativo: 9.3, reconhecimento: 9.8, marketing: 9.2, elegibilidade: 9.5, atuacao: 9.8, genero: "Musical/Crime", isBrazilian: false, isWinner: false },
+                    { id: 1278263, tituloOriginal: "The Seed of the Sacred Fig", tituloCSV: "The Seed of the Sacred Fig", paisTMDB: "Irã/Alemanha", anoTMDB: 2024, cinematografia: 9.2, impactoNarrativo: 9.7, reconhecimento: 10.0, marketing: 9.5, elegibilidade: 9.8, atuacao: 9.0, genero: "Drama", isBrazilian: false, isWinner: false },
+                    { id: 823219, tituloOriginal: "Flow", tituloCSV: "Flow", paisTMDB: "Letônia/Bélgica/França", anoTMDB: 2024, cinematografia: 9.3, impactoNarrativo: 9.0, reconhecimento: 9.5, marketing: 8.8, elegibilidade: 9.0, atuacao: 9.2, genero: "Animação", isBrazilian: false, isWinner: false }
+                ]
+            }
+        };
+
+        let activeCharts = {};
+        const primaryTextColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-text-color').trim();
+        const accentColor = `rgb(${getComputedStyle(document.documentElement).getPropertyValue('--accent-color-rgb').trim()})`;
+
+        function createSmallRadarChart(canvasId, film) {
+            if (!film || !document.getElementById(canvasId)) return null;
+            const metrics = ['cinematografia', 'impactoNarrativo', 'atuacao', 'reconhecimento', 'marketing'];
+            const labels = ['Cinemat.', 'Impacto', 'Atuação', 'Reconhec.', 'Marketing'];
+            const data = metrics.map(m => film?.[m] || 0);
+
+            const chartData = {
+                labels: labels,
+                datasets: [{
+                    label: film.tituloCSV.substring(0, 20),
+                    data: data,
+                    backgroundColor: `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--accent-color-rgb').trim()}, 0.3)`,
+                    borderColor: `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--accent-color-rgb').trim()}, 0.7)`,
+                    pointBackgroundColor: accentColor,
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: accentColor,
+                    borderWidth: 1.5,
+                    pointRadius: 2.5,
+                    pointHoverRadius: 4
+                }]
+            };
+            const options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => `${ctx.label}: ${ctx.raw?.toFixed(1) ?? 'N/A'}`
+                        },
+                        bodyColor: primaryTextColor,
+                        titleColor: accentColor,
+                        bodyFont: { size: 12 }, // Aumenta a fonte do texto do tooltip
+                        titleFont: { size: 14 } // Aumenta a fonte do título do tooltip
+                    },
+                    datalabels: {
+                        display: true, // Mostra o valor de cada ponto no radar
+                        color: primaryTextColor,
+                        font: {
+                            size: 10, // Aumenta a fonte do datalabel no radar
+                            weight: 'bold'
+                        },
+                        formatter: (value) => value?.toFixed(1) ?? 'N/A'
+                    }
+                },
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(var(--primary-text-color-rgb), 0.2)' },
+                        grid: { color: 'rgba(var(--primary-text-color-rgb), 0.2)' },
+                        pointLabels: { font: { size: 10 }, color: primaryTextColor }, // Aumenta a fonte dos rótulos (Cinemat., Impacto, etc.)
+                        ticks: { display: true, stepSize: 2, backdropColor: 'transparent', color: primaryTextColor, font: { size: 9 } }, // Aumenta a fonte dos números do eixo (0, 2, 4...)
+                        suggestedMin: 0,
+                        suggestedMax: 10
+                    }
+                },
+                animation: { duration: 600 }
+            };
+            return new Chart(document.getElementById(canvasId).getContext('2d'), { type: 'radar', data: chartData, options: options });
+        }
+
+        function createComparisonBarChart(canvasId, brazilianFilm, winnerFilm) {
+            const canvas = document.getElementById(canvasId);
+            if (!brazilianFilm || !winnerFilm || (brazilianFilm.id === winnerFilm.id) || !canvas) {
+                 if(canvas) {
+                    canvas.parentElement.innerHTML = '<p class="comparison-note">Comparativo direto não aplicável ou dados insuficientes.</p>';
+                }
+                return null;
+            }
+            const metricsToCompare = ['atuacao', 'reconhecimento', 'impactoNarrativo', 'cinematografia'];
+            const labels = ['Atuação', 'Reconhec.', 'Impacto Narr.', 'Cinemat.'];
+
+            const brazilianData = metricsToCompare.map(m => brazilianFilm?.[m] || 0);
+            const winnerData = metricsToCompare.map(m => winnerFilm?.[m] || 0);
+
+            const brazilAccentRgb = getComputedStyle(document.documentElement).getPropertyValue('--accent-color-darker-rgb').trim();
+            const winnerAccentRgb = getComputedStyle(document.documentElement).getPropertyValue('--accent-color-rgb').trim();
+
+            const chartData = {
+                labels: labels,
+                datasets: [
+                    { label: `Brasil: ${brazilianFilm.tituloCSV.substring(0,15)}...`, data: brazilianData, backgroundColor: `rgba(${brazilAccentRgb}, 0.7)`, borderColor: `rgb(${brazilAccentRgb})`, borderWidth: 1 },
+                    { label: `Vencedor: ${winnerFilm.tituloCSV.substring(0,15)}...`, data: winnerData, backgroundColor: `rgba(${winnerAccentRgb}, 0.7)`, borderColor: `rgb(${winnerAccentRgb})`, borderWidth: 1 }
+                ]
+            };
+            const options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    title: { display: false },
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 10,
+                            font: { size: 11 }, // Aumenta a fonte da legenda
+                            color: primaryTextColor
+                        }
+                    },
+                    tooltip: {
+                        callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw?.toFixed(1) ?? 'N/A'}`},
+                        bodyColor: primaryTextColor,
+                        titleColor: accentColor,
+                        bodyFont: { size: 12 },
+                        titleFont: { size: 14 }
+                    },
+                    datalabels: {
+                        display: true,
+                        color: '#000000',
+                        anchor: 'end',
+                        align: 'end',
+                        formatter: (val) => val?.toFixed(1) ?? 'N/A',
+                        font: { weight: 'bold', size: 10 } // Aumenta a fonte dos datalabels
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        suggestedMax: 10,
+                        ticks: { color: primaryTextColor, font: {size:10} }, // Aumenta a fonte dos ticks do eixo X
+                        grid: { color: 'rgba(var(--primary-text-color-rgb), 0.1)'}
+                    },
+                    y: {
+                        ticks: { color: primaryTextColor, font: {size:10} }, // Aumenta a fonte dos ticks do eixo Y (rótulos das métricas)
+                        grid: { display: false }
+                    }
+                },
+                animation: { duration: 600 }
+            };
+            return new Chart(canvas.getContext('2d'), { type: 'bar', data: chartData, options: options });
+        }
+
+        function createAllNomineesBarChart(canvasId, films, metricToCompare, datasetLabel) {
+            const canvas = document.getElementById(canvasId);
+             if (!films || films.length === 0 || !canvas || !films.some(film => film?.[metricToCompare] !== null && film?.[metricToCompare] !== undefined)) {
+                if (canvas)
+                canvas.parentElement.innerHTML = `<p class="comparison-note">Dados insuficientes para comparar por '${datasetLabel}'.</p>`;
+                return null;
+            }
+
+            const validFilms = films.filter(film => film?.[metricToCompare] !== null && film?.[metricToCompare] !== undefined);
+            validFilms.sort((a, b) => (b[metricToCompare] || 0) - (a[metricToCompare] || 0));
+
+            const labels = validFilms.map(film => film.tituloCSV.substring(0, 25) + (film.isBrazilian ? ' (BR)' : (film.isWinner ? ' (Vencedor)' : '')));
+            const data = validFilms.map(film => film[metricToCompare] || 0);
+
+            const accentRgb = getComputedStyle(document.documentElement).getPropertyValue('--accent-color-rgb').trim();
+            const accentDarkerRgb = getComputedStyle(document.documentElement).getPropertyValue('--accent-color-darker-rgb').trim();
+
+            const backgroundColor = validFilms.map(film => {
+                if (film.isBrazilian && film.isWinner) return `rgba(${accentRgb}, 0.9)`;
+                if (film.isBrazilian) return `rgba(${accentDarkerRgb}, 0.7)`;
+                if (film.isWinner) return `rgba(${accentRgb}, 0.8)`;
+                return `rgba(${accentRgb}, 0.5)`;
+            });
+            const borderColor = validFilms.map(film => {
+                if (film.isBrazilian && film.isWinner) return `rgb(${accentDarkerRgb})`;
+                if (film.isBrazilian) return `rgb(${accentDarkerRgb})`;
+                if (film.isWinner) return `rgb(${accentRgb})`;
+                return `rgb(${accentRgb})`;
+            });
+
+            const chartData = {
+                labels: labels,
+                datasets: [{
+                    label: datasetLabel,
+                    data: data,
+                    backgroundColor: backgroundColor,
+                    borderColor: borderColor,
+                    borderWidth: 1
+                }]
+            };
+            const options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    title: { display: false },
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw?.toFixed(1) ?? 'N/A'}`},
+                        bodyColor: primaryTextColor,
+                        titleColor: accentColor,
+                        bodyFont: { size: 12 },
+                        titleFont: { size: 14 }
+                    },
+                    datalabels: {
+                        display: true,
+                        color: primaryTextColor,
+                        anchor: 'end',
+                        align: 'right',
+                        offset: 4,
+                        formatter: (value) => value?.toFixed(1) ?? 'N/A',
+                        font: { weight: '500', size: 10 } // Aumenta a fonte dos datalabels
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        suggestedMax: 10,
+                        ticks: { color: primaryTextColor, font: {size:10} }, // Aumenta a fonte dos ticks do eixo X
+                        grid: { color: 'rgba(var(--primary-text-color-rgb), 0.1)' }
+                    },
+                    y: {
+                        ticks: { color: primaryTextColor, font: {size:10} }, // Aumenta a fonte dos ticks do eixo Y (rótulos dos filmes)
+                        grid: { display: false }
+                    }
+                },
+                animation: { duration: 600 }
+            };
+            return new Chart(canvas.getContext('2d'), { type: 'bar', data: chartData, options: options });
+        }
+
+        function renderYearSection(yearKey) {
+            const yearData = oscarData[yearKey];
+            const mainContent = document.getElementById('mainContent');
+            mainContent.innerHTML = '';
+
+            const section = document.createElement('section');
+            section.id = `content-${yearKey}`;
+            section.classList.add('year-section');
+
+            const brazilianFilm = yearData.films.find(f => f.isBrazilian);
+            const winnerFilm = yearData.films.find(f => f.isWinner);
+            const otherNominees = yearData.films.filter(f => f !== brazilianFilm && f !== winnerFilm);
+            const isBrazilianTheWinner = brazilianFilm && winnerFilm && brazilianFilm.id === winnerFilm.id;
+
+            let focusGridClass = 'focus-highlight-grid';
+            if (isBrazilianTheWinner || (!brazilianFilm && winnerFilm) || (brazilianFilm && !winnerFilm) ) {
+                focusGridClass += ' single-focus';
+            }
+
+            let sectionHTML = `
+                <div class="year-header">
+                    <h2 class="year-title">Oscar ${yearKey}</h2>
+                    <p class="year-category">${yearData.pageTitleSuffix} - ${yearData.category}</p>
+                </div>
+                <div class="${focusGridClass}">
+            `;
+
+            if (isBrazilianTheWinner) {
+                sectionHTML += `
+                    <div class="film-spotlight-card brazilian-winner">
+                        <div class="card-header"><h3>Filme Brasileiro Vencedor do Oscar!</h3></div>
+                        <p class="film-title">${brazilianFilm.tituloCSV}</p>
+                        <p class="film-country">${brazilianFilm.paisTMDB} (${brazilianFilm.anoTMDB})</p>
+                        <div class="small-radar-container">
+                            <canvas id="radar-br-winner-${yearKey}"></canvas>
+                        </div>
+                    </div>
+                `;
+            } else {
+                if (brazilianFilm) {
+                    sectionHTML += `
+                        <div class="film-spotlight-card brazilian">
+                            <div class="card-header"><h3>Destaque Brasileiro</h3></div>
+                           <p class="film-title">${brazilianFilm.tituloCSV}</p>
+                            <p class="film-country">${brazilianFilm.paisTMDB} (${brazilianFilm.anoTMDB})</p>
+                            <div class="small-radar-container">
+                                <canvas id="radar-br-${yearKey}"></canvas>
+                            </div>
+                        </div>
+                    `;
+                } else if (winnerFilm) {
+                    sectionHTML += `<div></div>`;
+                }
+
+
+                if (winnerFilm) {
+                    sectionHTML += `
+                        <div class="film-spotlight-card winner">
+                            <div class="card-header"><h3>Vencedor do Oscar</h3></div>
+                            <p class="film-title">${winnerFilm.tituloCSV}</p>
+                            <p class="film-country">${winnerFilm.paisTMDB} (${winnerFilm.anoTMDB})</p>
+                            <div class="small-radar-container">
+                                <canvas id="radar-winner-${yearKey}"></canvas>
+                            </div>
+                        </div>
+                    `;
+                } else if (brazilianFilm) {
+                    sectionHTML += `<div></div>`;
+                }
+            }
+            // Garantir que o grid tenha "espaço" para o segundo card se um dos dois estiver faltando (e não for o caso de BR ser o vencedor)
+            if (!isBrazilianTheWinner && ((brazilianFilm && !winnerFilm) || (!brazilianFilm && winnerFilm))) {
+                // Não adicionar nada aqui se a intenção é centralizar o card único com 'single-focus'
+            }
+
+            sectionHTML += `</div>`;
+
+            if (brazilianFilm && winnerFilm && !isBrazilianTheWinner) {
+                sectionHTML += `
+                    <div class="comparison-section">
+                        <h3>Comparativo Direto: Brasil vs Vencedor (Métricas Chave)</h3>
+                        <div class="comparison-chart-container">
+                            <canvas id="compare-br-winner-chart-${yearKey}"></canvas>
+                        </div>
+                    </div>
+                `;
+            } else if (isBrazilianTheWinner && brazilianFilm) { // Modificado para checar brazilianFilm
+                sectionHTML += `
+                    <div class="comparison-section">
+                         <h3>Comparativo Direto: Brasil vs Vencedor</h3>
+                       <p class="comparison-note">O filme brasileiro ("${brazilianFilm.tituloCSV}") foi o grande vencedor este ano!</p>
+                    </div>`;
+            } else {
+                 sectionHTML += `
+                    <div class="comparison-section">
+                         <h3>Comparativo Direto: Brasil vs Vencedor</h3>
+                       <p class="comparison-note">Não é possível exibir o comparativo direto.</p>
+                    </div>`;
+            }
+
+            // Lógica para o título e métrica do gráfico de todos os nomeados
+            let generalComparisonMetric = 'reconhecimento';
+            let generalComparisonTitleDisplay = 'Reconhecimento'; // Para o H3
+            let generalComparisonDatasetLabel = 'Reconhecimento dos Concorrentes'; // Para o label do dataset
+
+            if (yearKey === "2024") {
+                generalComparisonMetric = 'impactoNarrativo';
+                generalComparisonTitleDisplay = 'Impacto Narrativo';
+                generalComparisonDatasetLabel = 'Impacto Narrativo dos Concorrentes (2024)';
+            }
+
+
+            sectionHTML += `
+                <div class="all-nominees-comparison-section">
+                    <h3>Comparativo Geral dos Indicados (${generalComparisonTitleDisplay})</h3>
+                    <div class="all-nominees-chart-container">
+                        <canvas id="all-nominees-chart-${yearKey}"></canvas>
+                    </div>
+                </div>
+            `;
+
+            if (otherNominees.length > 0) {
+                sectionHTML += `
+                    <div class="other-nominees-section">
+                        <h3>Outros Indicados Notáveis</h3>
+                       <div class="other-nominees-grid">
+                `;
+                otherNominees.forEach(film => {
+                    sectionHTML += `
+                        <div class="nominee-card">
+                            <p class="title">${film.tituloCSV}</p>
+                            <p class="country">${film.paisTMDB}</p>
+                        </div>
+                    `;
+                });
+                sectionHTML += `</div></div>`;
+            }
+            section.innerHTML = sectionHTML;
+            mainContent.appendChild(section);
+            section.classList.add('active');
+
+            Object.values(activeCharts).forEach(chart => { if(chart) chart.destroy(); });
+            activeCharts = {};
+
+            if (isBrazilianTheWinner) {
+                activeCharts[`radar-br-winner-${yearKey}`] = createSmallRadarChart(`radar-br-winner-${yearKey}`, brazilianFilm);
+            } else {
+                if (brazilianFilm) {
+                    activeCharts[`radar-br-${yearKey}`] = createSmallRadarChart(`radar-br-${yearKey}`, brazilianFilm);
+                }
+                if (winnerFilm) {
+                    activeCharts[`radar-winner-${yearKey}`] = createSmallRadarChart(`radar-winner-${yearKey}`, winnerFilm);
+                }
+            }
+
+            if (brazilianFilm && winnerFilm && !isBrazilianTheWinner) {
+                activeCharts[`compare-br-winner-chart-${yearKey}`] = createComparisonBarChart(`compare-br-winner-chart-${yearKey}`, brazilianFilm, winnerFilm);
+            }
+            activeCharts[`all-nominees-chart-${yearKey}`] = createAllNomineesBarChart(
+                `all-nominees-chart-${yearKey}`,
+                yearData.films,
+                generalComparisonMetric,
+                generalComparisonDatasetLabel
+            );
+        }
+
+        function initDashboard() {
+            const navLinksContainer = document.querySelector('.nav-links');
+            const mainContent = document.getElementById('mainContent');
+            mainContent.innerHTML = '';
+
+            const years = Object.keys(oscarData).sort((a,b) => parseInt(a) - parseInt(b));
+
+            years.forEach(yearKey => {
+                const navLink = document.createElement('a');
+                navLink.href = '#';
+                navLink.classList.add('nav-item');
+                navLink.dataset.year = yearKey;
+                navLink.textContent = yearKey;
+                navLinksContainer.appendChild(navLink);
+            });
+
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const selectedYearKey = e.target.dataset.year;
+                    renderYearSection(selectedYearKey);
+                    navItems.forEach(i => i.classList.remove('active'));
+                    e.target.classList.add('active');
+                });
+            });
+
+            if (years.length > 0) {
+                const firstYearKey = years[0];
+                navLinksContainer.querySelector(`.nav-item[data-year="${firstYearKey}"]`).classList.add('active');
+                renderYearSection(firstYearKey);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>

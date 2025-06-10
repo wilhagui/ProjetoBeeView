@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Franquias Cinematográficas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <style>
+        /* Custom styles for better aesthetics */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light gray background */
+        }
+        .chart-container {
+            background-color: #ffffff; /* White background for charts */
+            border-radius: 1rem; /* Rounded corners */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            /* Ensure the container doesn't force infinite growth */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 {
+            color: #1a202c; /* Dark text for headings */
+        }
+        canvas {
+            max-width: 100%; /* Ensure canvas doesn't overflow its container */
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+    <header class="text-center mb-10">
+        <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Análise de Franquias Cinematográficas</h1>
+        <p class="text-lg text-gray-600">Comparativo de Métricas entre Filmes Originais e Sequências (Brasil vs. EUA)</p>
+    </header>
+
+    <main class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+
+        <div class="chart-container">
+            <h2 class="text-2xl font-semibold mb-4 text-center">Média de Avaliação (vote_average)</h2>
+            <canvas id="voteAverageChart" height="300"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h2 class="text-2xl font-semibold mb-4 text-center">Média de Popularidade</h2>
+            <canvas id="popularityChart" height="300"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h2 class="text-2xl font-semibold mb-4 text-center">Percentual de Filmes de "Sucesso"</h2>
+            <canvas id="successPercentageChart" height="300"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h2 class="text-2xl font-semibold mb-4 text-center">Top Gêneros Mais Comuns (Brasil)</h2>
+            <canvas id="brazilGenresChart" height="300"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h2 class="text-2xl font-semibold mb-4 text-center">Top Gêneros Mais Comuns (EUA)</h2>
+            <canvas id="usaGenresChart" height="400"></canvas> </div>
+
+        <div class="chart-container md:col-span-2">
+            <h2 class="text-2xl font-semibold mb-4 text-center">Média de ROI (Geral)</h2>
+            <canvas id="roiChart" height="300"></canvas>
+        </div>
+
+    </main>
+
+    <script>
+        // Dados para os gráficos
+        const chartData = {
+            voteAverage: {
+                labels: ['Original', 'Sequência'],
+                datasets: [
+                    {
+                        label: 'Brasil',
+                        data: [7.077111, 7.877667],
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                    },
+                    {
+                        label: 'EUA',
+                        data: [7.065385, 6.729250],
+                        backgroundColor: 'rgba(153, 102, 255, 0.6)',
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                    }
+                ]
+            },
+            popularity: {
+                labels: ['Original', 'Sequência'],
+                datasets: [
+                    {
+                        label: 'Brasil',
+                        data: [13.555556, 30.000000],
+                        backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                    },
+                    {
+                        label: 'EUA',
+                        data: [39.341308, 114.830056],
+                        backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                    }
+                ]
+            },
+            successPercentage: {
+                labels: ['Original', 'Sequência'],
+                datasets: [
+                    {
+                        label: 'Brasil',
+                        data: [22.222222, 100.000000],
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                    },
+                    {
+                        label: 'EUA',
+                        data: [69.230769, 36.111111],
+                        backgroundColor: 'rgba(255, 206, 86, 0.6)',
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                    }
+                ]
+            },
+            brazilGenres: {
+                labels: ['Comedy', 'Drama', 'Action', 'Crime', 'Family'],
+                datasets: [{
+                    label: 'Contagem de Filmes',
+                    data: [9, 4, 2, 2, 1],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 8,
+                }]
+            },
+            usaGenres: {
+                labels: ['Comedy', 'Thriller', 'Family', 'Action', 'Crime', 'Horror', 'Adventure', 'Animation', 'Drama', 'Mystery', 'Fantasy', 'Science Fiction', 'Romance'],
+                datasets: [{
+                    label: 'Contagem de Filmes',
+                    data: [24, 23, 16, 15, 11, 10, 10, 10, 8, 8, 5, 2, 2],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6)', 'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)', 'rgba(153, 102, 255, 0.6)', 'rgba(255, 159, 64, 0.6)',
+                        'rgba(201, 203, 207, 0.6)', 'rgba(75, 192, 192, 0.6)', 'rgba(192, 75, 192, 0.6)',
+                        'rgba(132, 99, 255, 0.6)', 'rgba(64, 255, 159, 0.6)', 'rgba(235, 54, 162, 0.6)',
+                        'rgba(86, 255, 206, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)', 'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)',
+                        'rgba(201, 203, 207, 1)', 'rgba(75, 192, 192, 1)', 'rgba(192, 75, 192, 1)',
+                        'rgba(132, 99, 255, 1)', 'rgba(64, 255, 159, 1)', 'rgba(235, 54, 162, 1)',
+                        'rgba(86, 255, 206, 1)'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 8,
+                }]
+            },
+            roi: {
+                labels: ['Original', 'Sequência'],
+                datasets: [{
+                    label: 'Média de ROI',
+                    data: [220850.780665, 59465.919164],
+                    backgroundColor: [
+                        'rgba(255, 159, 64, 0.6)',
+                        'rgba(75, 192, 192, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(75, 192, 192, 1)'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 8,
+                }]
+            }
+        };
+
+        // Função para criar um gráfico de barras
+        function createBarChart(ctx, data, title) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: data,
+                options: {
+                    // Removed responsive: true and maintainAspectRatio: false
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        },
+                        title: {
+                            display: false, // Title is in H2 tag
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Função para criar um gráfico de barras horizontais (bom para muitos itens como gêneros)
+        function createHorizontalBarChart(ctx, data, title) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: data,
+                options: {
+                    indexAxis: 'y', // Isso faz o gráfico ser horizontal
+                    // Removed responsive: true and maintainAspectRatio: false
+                    plugins: {
+                        legend: {
+                            display: false, // Não precisa de legenda para um único dataset
+                        },
+                        title: {
+                            display: false, // Title is in H2 tag
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Renderizar os gráficos quando a janela carregar
+        window.onload = function() {
+            // vote_average Média Comparativa
+            const ctxVoteAverage = document.getElementById('voteAverageChart').getContext('2d');
+            createBarChart(ctxVoteAverage, chartData.voteAverage, 'Média de Avaliação (vote_average)');
+
+            // popularity Média Comparativa
+            const ctxPopularity = document.getElementById('popularityChart').getContext('2d');
+            createBarChart(ctxPopularity, chartData.popularity, 'Média de Popularidade');
+
+            // Percentual de Filmes de "Sucesso"
+            const ctxSuccessPercentage = document.getElementById('successPercentageChart').getContext('2d');
+            createBarChart(ctxSuccessPercentage, chartData.successPercentage, 'Percentual de Filmes de "Sucesso"');
+
+            // Top Gêneros Mais Comuns (Brasil)
+            const ctxBrazilGenres = document.getElementById('brazilGenresChart').getContext('2d');
+            createHorizontalBarChart(ctxBrazilGenres, chartData.brazilGenres, 'Top Gêneros Mais Comuns (Brasil)');
+
+            // Top Gêneros Mais Comuns (EUA)
+            const ctxUsaGenres = document.getElementById('usaGenresChart').getContext('2d');
+            createHorizontalBarChart(ctxUsaGenres, chartData.usaGenres, 'Top Gêneros Mais Comuns (EUA)');
+
+            // Média de ROI - Originais vs Sequências - Geral
+            const ctxRoi = document.getElementById('roiChart').getContext('2d');
+            createBarChart(ctxRoi, chartData.roi, 'Média de ROI (Geral)');
+        };
+    </script>
+</body>
+</html>
